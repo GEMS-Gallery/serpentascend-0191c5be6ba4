@@ -27,6 +27,8 @@
             flex-direction: column;
             align-items: center;
             gap: 20px;
+            min-width: 300px;
+            min-height: 300px;
         }
         #board {
             display: grid;
@@ -52,6 +54,8 @@
             border: 1px solid #e2e8f0;
             border-radius: 4px;
             position: relative;
+            min-width: 30px;
+            min-height: 30px;
         }
         .player {
             width: 20px;
@@ -99,12 +103,22 @@
             font-size: 2rem;
             margin: 0 20px;
         }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: #4a5568;
+        }
     </style>
 </head>
 <body>
     <h1>Enhanced Snakes and Ladders</h1>
     <div id="game-container">
-        <div id="board"></div>
+        <div id="board">
+            <div id="loading">Loading game board...</div>
+        </div>
         <div id="controls">
             <button id="rollButton">Roll Dice</button>
             <div id="dice">🎲</div>
@@ -123,6 +137,7 @@
         const diceEl = document.getElementById('dice');
         const player1InfoEl = document.getElementById('player1-info');
         const player2InfoEl = document.getElementById('player2-info');
+        const loadingEl = document.getElementById('loading');
 
         let currentPlayer = 0;
         let players = [
@@ -142,23 +157,34 @@
         const actor = Actor.createActor(canisterInterface, { agent, canisterId });
 
         async function createBoard() {
-            for (let i = 100; i > 0; i--) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.textContent = i;
-                cell.id = `cell-${i}`;
-                board.appendChild(cell);
+            try {
+                console.log('Creating board...');
+                board.innerHTML = ''; // Clear loading message
+                for (let i = 100; i > 0; i--) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.textContent = i;
+                    cell.id = `cell-${i}`;
+                    board.appendChild(cell);
+                }
+                
+                console.log('Adding snakes and ladders...');
+                addSnakesAndLadders();
+
+                console.log('Creating player tokens...');
+                players.forEach((player, index) => {
+                    player.element = document.createElement('div');
+                    player.element.className = `player player${index + 1}`;
+                    board.appendChild(player.element);
+                });
+
+                console.log('Updating player positions...');
+                await updatePlayerPositions();
+                console.log('Board creation complete.');
+            } catch (error) {
+                console.error('Error creating board:', error);
+                loadingEl.textContent = 'Error loading game board. Please refresh the page.';
             }
-            
-            addSnakesAndLadders();
-
-            players.forEach((player, index) => {
-                player.element = document.createElement('div');
-                player.element.className = `player player${index + 1}`;
-                board.appendChild(player.element);
-            });
-
-            await updatePlayerPositions();
         }
 
         function addSnakesAndLadders() {
@@ -215,14 +241,16 @@
 
                 players.forEach((player, index) => {
                     const cell = document.getElementById(`cell-${player.position}`);
-                    const cellRect = cell.getBoundingClientRect();
-                    const boardRect = board.getBoundingClientRect();
+                    if (cell && player.element) {
+                        const cellRect = cell.getBoundingClientRect();
+                        const boardRect = board.getBoundingClientRect();
 
-                    player.element.style.left = `${cellRect.left - boardRect.left + cell.offsetWidth / 2 - 10}px`;
-                    player.element.style.top = `${cellRect.top - boardRect.top + cell.offsetHeight / 2 - 10}px`;
+                        player.element.style.left = `${cellRect.left - boardRect.left + cell.offsetWidth / 2 - 10}px`;
+                        player.element.style.top = `${cellRect.top - boardRect.top + cell.offsetHeight / 2 - 10}px`;
 
-                    const infoEl = index === 0 ? player1InfoEl : player2InfoEl;
-                    infoEl.textContent = `Player ${index + 1}: ${player.position}`;
+                        const infoEl = index === 0 ? player1InfoEl : player2InfoEl;
+                        infoEl.textContent = `Player ${index + 1}: ${player.position}`;
+                    }
                 });
 
                 rollButton.textContent = `Player ${currentPlayer + 1} Roll`;
@@ -266,7 +294,7 @@
             await movePlayer(currentPlayer, diceValue);
         });
 
-        createBoard();
+        document.addEventListener('DOMContentLoaded', createBoard);
 
         // Canister interface
         const canisterInterface = ({
