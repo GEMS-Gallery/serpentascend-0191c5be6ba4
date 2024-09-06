@@ -152,12 +152,20 @@
         };
 
         // Initialize the agent
-        const agent = new HttpAgent();
-        const canisterId = 'CANISTER_ID_PLACEHOLDER'; // Replace with your actual canister ID
-        const actor = Actor.createActor(canisterInterface, { agent, canisterId });
+        const initializeActor = async () => {
+            const agent = new HttpAgent();
+            const canisterId = 'CANISTER_ID_PLACEHOLDER'; // Replace with your actual canister ID
+            return Actor.createActor(canisterInterface, { agent, canisterId });
+        };
+
+        let actor;
 
         async function createBoard() {
             try {
+                console.log('Initializing actor...');
+                actor = await initializeActor();
+                console.log('Actor initialized.');
+
                 console.log('Creating board...');
                 board.innerHTML = ''; // Clear loading message
                 for (let i = 100; i > 0; i--) {
@@ -294,7 +302,7 @@
             await movePlayer(currentPlayer, diceValue);
         });
 
-        document.addEventListener('DOMContentLoaded', createBoard);
+        window.addEventListener('load', createBoard);
 
         // Canister interface
         const canisterInterface = ({
