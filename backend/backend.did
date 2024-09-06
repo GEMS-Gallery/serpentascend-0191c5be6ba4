@@ -1,0 +1,24 @@
+type Result = 
+ variant {
+   err: text;
+   ok: GameState;
+ };
+type Player = 
+ record {
+   id: nat;
+   position: nat;
+ };
+type GameState = 
+ record {
+   currentPlayer: nat;
+   players: vec Player;
+   winner: opt nat;
+ };
+service : {
+  checkWinCondition: () -> (opt nat) query;
+  getCurrentPlayer: () -> (nat) query;
+  getGameState: () -> (GameState) query;
+  initGame: () -> ();
+  movePlayer: (nat, nat) -> (Result);
+  rollDice: () -> (nat);
+}
