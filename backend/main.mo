@@ -36,7 +36,7 @@ actor SnakesAndLadders {
     (95, 75), (99, 78)
   ];
 
-  public func initGame(): async () {
+  public func initGame(): async GameState {
     gameState := {
       players = [
         { id = 0; position = 0 },
@@ -45,6 +45,7 @@ actor SnakesAndLadders {
       currentPlayer = 0;
       winner = null;
     };
+    gameState
   };
 
   public func rollDice(): async Nat {
@@ -54,6 +55,10 @@ actor SnakesAndLadders {
   };
 
   public func movePlayer(playerId: Nat, steps: Nat): async Result.Result<GameState, Text> {
+    if (gameState.winner != null) {
+      return #err("Game has already ended");
+    };
+
     if (playerId != gameState.currentPlayer) {
       return #err("Not your turn");
     };

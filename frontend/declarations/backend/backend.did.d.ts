@@ -14,7 +14,7 @@ export interface _SERVICE {
   'checkWinCondition' : ActorMethod<[], [] | [bigint]>,
   'getCurrentPlayer' : ActorMethod<[], bigint>,
   'getGameState' : ActorMethod<[], GameState>,
-  'initGame' : ActorMethod<[], undefined>,
+  'initGame' : ActorMethod<[], GameState>,
   'movePlayer' : ActorMethod<[bigint, bigint], Result>,
   'rollDice' : ActorMethod<[], bigint>,
 }

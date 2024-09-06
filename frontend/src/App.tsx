@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { backend } from 'declarations/backend';
-import { Button, Typography, Box, CircularProgress } from '@mui/material';
+import { Button, Typography, Box, CircularProgress, Alert } from '@mui/material';
 import { styled } from '@mui/system';
 
 type Player = {
@@ -45,32 +45,63 @@ const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(false);
   const [diceRoll, setDiceRoll] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchGameState();
+    initGame();
   }, []);
 
+  const initGame = async () => {
+    try {
+      setLoading(true);
+      const initialState = await backend.initGame();
+      setGameState(initialState);
+      setError(null);
+    } catch (err) {
+      setError('Failed to initialize game. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchGameState = async () => {
-    const state = await backend.getGameState();
-    setGameState(state);
+    try {
+      const state = await backend.getGameState();
+      setGameState(state);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch game state. Please try again.');
+    }
   };
 
   const handleRollDice = async () => {
-    setLoading(true);
-    const roll = await backend.rollDice();
-    setDiceRoll(roll);
-    await handleMove(roll);
-    setLoading(false);
+    if (!gameState || gameState.winner !== null) return;
+
+    try {
+      setLoading(true);
+      const roll = await backend.rollDice();
+      setDiceRoll(roll);
+      await handleMove(roll);
+      setError(null);
+    } catch (err) {
+      setError('Failed to roll dice. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleMove = async (steps: number) => {
-    if (gameState) {
+    if (!gameState) return;
+
+    try {
       const result = await backend.movePlayer(gameState.currentPlayer, steps);
       if ('ok' in result) {
         setGameState(result.ok);
       } else {
-        console.error(result.err);
+        setError(result.err);
       }
+    } catch (err) {
+      setError('Failed to move player. Please try again.');
     }
   };
 
@@ -104,6 +135,7 @@ const App: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Snakes and Ladders
       </Typography>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <StyledGameBoard>{renderBoard()}</StyledGameBoard>
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography>
@@ -123,6 +155,13 @@ const App: React.FC = () => {
           Player {gameState.winner === 0 ? 'Green' : 'Blue'} wins!
         </Typography>
       )}
+      <Button
+        variant="outlined"
+        onClick={initGame}
+        sx={{ mt: 2 }}
+      >
+        New Game
+      </Button>
     </Box>
   );
 };

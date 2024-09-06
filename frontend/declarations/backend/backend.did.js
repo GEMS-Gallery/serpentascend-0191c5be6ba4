@@ -10,7 +10,7 @@ export const idlFactory = ({ IDL }) => {
     'checkWinCondition' : IDL.Func([], [IDL.Opt(IDL.Nat)], ['query']),
     'getCurrentPlayer' : IDL.Func([], [IDL.Nat], ['query']),
     'getGameState' : IDL.Func([], [GameState], ['query']),
-    'initGame' : IDL.Func([], [], []),
+    'initGame' : IDL.Func([], [GameState], []),
     'movePlayer' : IDL.Func([IDL.Nat, IDL.Nat], [Result], []),
     'rollDice' : IDL.Func([], [IDL.Nat], []),
   });
