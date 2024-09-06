@@ -21,8 +21,8 @@ actor SnakesAndLadders {
 
   stable var gameState: GameState = {
     players = [
-      { id = 0; position = 0 },
-      { id = 1; position = 0 }
+      { id = 0; position = 1 },
+      { id = 1; position = 1 }
     ];
     currentPlayer = 0;
     winner = null;
@@ -30,17 +30,17 @@ actor SnakesAndLadders {
 
   stable let boardSize: Nat = 100;
   stable let snakesAndLadders: [(Nat, Nat)] = [
-    (14, 4), (19, 8), (22, 20), (24, 16),
-    (28, 84), (37, 3), (41, 63), (54, 34),
-    (67, 27), (71, 91), (78, 98), (87, 36),
-    (95, 75), (99, 78)
+    (16, 6), (47, 26), (49, 11), (56, 53), (62, 19),
+    (64, 60), (87, 24), (93, 73), (95, 75), (98, 78),
+    (4, 14), (9, 31), (20, 38), (28, 84), (40, 59),
+    (51, 67), (63, 81), (71, 91)
   ];
 
   public func initGame(): async GameState {
     gameState := {
       players = [
-        { id = 0; position = 0 },
-        { id = 1; position = 0 }
+        { id = 0; position = 1 },
+        { id = 1; position = 1 }
       ];
       currentPlayer = 0;
       winner = null;
@@ -68,7 +68,7 @@ actor SnakesAndLadders {
     currentPosition += steps;
 
     if (currentPosition > boardSize) {
-      currentPosition := boardSize - (currentPosition - boardSize);
+      currentPosition := boardSize;
     };
 
     for ((start, end) in snakesAndLadders.vals()) {

@@ -1,13 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Snakes and Ladders</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Snakes and Ladders</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f4f8;
+            color: #2d3748;
+        }
+        h1 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 2px;
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #e6f2ff 0%, #f0e6ff 100%);
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        .cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            position: relative;
+        }
+        .player {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            position: absolute;
+            transition: all 0.5s ease;
+        }
+        .player1 { background-color: #48bb78; }
+        .player2 { background-color: #4299e1; }
+        .snake, .ladder {
+            position: absolute;
+            pointer-events: none;
+        }
+        #controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        button {
+            background-color: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #3182ce;
+        }
+        #game-info {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 600px;
+            margin-top: 20px;
+        }
+        .player-info {
+            text-align: center;
+            font-weight: bold;
+        }
+        #dice {
+            font-size: 2rem;
+            margin: 0 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Enhanced Snakes and Ladders</h1>
+    <div id="game-container">
+        <div id="board"></div>
+        <div id="controls">
+            <button id="rollButton">Roll Dice</button>
+            <div id="dice">🎲</div>
+        </div>
+        <div id="game-info">
+            <div class="player-info" id="player1-info">Player 1: 1</div>
+            <div class="player-info" id="player2-info">Player 2: 1</div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@dfinity/agent/lib/index.js"></script>
+    <script>
+        const board = document.getElementById('board');
+        const rollButton = document.getElementById('rollButton');
+        const diceEl = document.getElementById('dice');
+        const player1InfoEl = document.getElementById('player1-info');
+        const player2InfoEl = document.getElementById('player2-info');
+
+        let currentPlayer = 0;
+        let players = [
+            { position: 1, element: null },
+            { position: 1, element: null }
+        ];
+
+        const snakesAndLadders = {
+            16: 6, 47: 26, 49: 11, 56: 53, 62: 19,
+            64: 60, 87: 24, 93: 73, 95: 75, 98: 78,
+            4: 14, 9: 31, 20: 38, 28: 84, 40: 59, 51: 67, 63: 81, 71: 91
+        };
+
+        // Initialize the agent
+        const agent = new window.ic.HttpAgent();
+        const canisterId = 'CANISTER_ID_PLACEHOLDER'; // Replace with your actual canister ID
+        const actor = window.ic.Actor.createActor(canisterInterface, { agent, canisterId });
+
+        async function createBoard() {
+            for (let i = 100; i > 0; i--) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.textContent = i;
+                cell.id = `cell-${i}`;
+                board.appendChild(cell);
+            }
+            
+            addSnakesAndLadders();
+
+            players.forEach((player, index) => {
+                player.element = document.createElement('div');
+                player.element.className = `player player${index + 1}`;
+                board.appendChild(player.element);
+            });
+
+            await updatePlayerPositions();
+        }
+
+        function addSnakesAndLadders() {
+            Object.entries(snakesAndLadders).forEach(([start, end]) => {
+                const startCell = document.getElementById(`cell-${start}`);
+                const endCell = document.getElementById(`cell-${end}`);
+                const isLadder = end > start;
+
+                const element = document.createElement('div');
+                element.className = isLadder ? 'ladder' : 'snake';
+                
+                const startRect = startCell.getBoundingClientRect();
+                const endRect = endCell.getBoundingClientRect();
+                const boardRect = board.getBoundingClientRect();
+
+                const length = Math.sqrt(
+                    Math.pow(endRect.left - startRect.left, 2) +
+                    Math.pow(endRect.top - startRect.top, 2)
+                );
+
+                const angle = Math.atan2(
+                    endRect.top - startRect.top,
+                    endRect.left - startRect.left
+                ) * (180 / Math.PI);
+
+                element.style.width = `${length}px`;
+                element.style.height = '10px';
+                element.style.backgroundColor = isLadder ? '#4a5568' : '#e53e3e';
+                element.style.position = 'absolute';
+                element.style.left = `${(startRect.left - boardRect.left + startCell.offsetWidth / 2)}px`;
+                element.style.top = `${(startRect.top - boardRect.top + startCell.offsetHeight / 2)}px`;
+                element.style.transformOrigin = 'left center';
+                element.style.transform = `rotate(${angle}deg)`;
+                element.style.zIndex = '1';
+
+                board.appendChild(element);
+            });
+        }
+
+        async function rollDice() {
+            return await actor.rollDice();
+        }
+
+        async function updatePlayerPositions() {
+            const gameState = await actor.getGameState();
+            players = gameState.players;
+            currentPlayer = gameState.currentPlayer;
+
+            players.forEach((player, index) => {
+                const cell = document.getElementById(`cell-${player.position}`);
+                const cellRect = cell.getBoundingClientRect();
+                const boardRect = board.getBoundingClientRect();
+
+                player.element.style.left = `${cellRect.left - boardRect.left + cell.offsetWidth / 2 - 10}px`;
+                player.element.style.top = `${cellRect.top - boardRect.top + cell.offsetHeight / 2 - 10}px`;
+
+                const infoEl = index === 0 ? player1InfoEl : player2InfoEl;
+                infoEl.textContent = `Player ${index + 1}: ${player.position}`;
+            });
+
+            rollButton.textContent = `Player ${currentPlayer + 1} Roll`;
+        }
+
+        async function movePlayer(playerIndex, spaces) {
+            const result = await actor.movePlayer(playerIndex, spaces);
+            if ('ok' in result) {
+                await updatePlayerPositions();
+                const gameState = result.ok;
+                if (gameState.winner !== null) {
+                    setTimeout(() => {
+                        alert(`Congratulations! Player ${gameState.winner + 1} won!`);
+                        resetGame();
+                    }, 100);
+                }
+            } else {
+                console.error(result.err);
+            }
+        }
+
+        async function resetGame() {
+            await actor.initGame();
+            await updatePlayerPositions();
+        }
+
+        rollButton.addEventListener('click', async () => {
+            const diceValue = await rollDice();
+            diceEl.textContent = `🎲 ${diceValue}`;
+            await movePlayer(currentPlayer, diceValue);
+        });
+
+        createBoard();
+
+        // Canister interface
+        const canisterInterface = ({
+            initGame: () => {},
+            rollDice: () => {},
+            movePlayer: (playerId, steps) => {},
+            getCurrentPlayer: () => {},
+            getGameState: () => {},
+            checkWinCondition: () => {}
+        });
+    </script>
+</body>
 </html>
