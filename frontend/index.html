@@ -115,8 +115,9 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/@dfinity/agent/lib/index.js"></script>
-    <script>
+    <script type="module">
+        import { Actor, HttpAgent } from '@dfinity/agent';
+
         const board = document.getElementById('board');
         const rollButton = document.getElementById('rollButton');
         const diceEl = document.getElementById('dice');
@@ -136,9 +137,9 @@
         };
 
         // Initialize the agent
-        const agent = new window.ic.HttpAgent();
+        const agent = new HttpAgent();
         const canisterId = 'CANISTER_ID_PLACEHOLDER'; // Replace with your actual canister ID
-        const actor = window.ic.Actor.createActor(canisterInterface, { agent, canisterId });
+        const actor = Actor.createActor(canisterInterface, { agent, canisterId });
 
         async function createBoard() {
             for (let i = 100; i > 0; i--) {
@@ -198,48 +199,65 @@
         }
 
         async function rollDice() {
-            return await actor.rollDice();
+            try {
+                return await actor.rollDice();
+            } catch (error) {
+                console.error('Error rolling dice:', error);
+                return 1; // Default to 1 if there's an error
+            }
         }
 
         async function updatePlayerPositions() {
-            const gameState = await actor.getGameState();
-            players = gameState.players;
-            currentPlayer = gameState.currentPlayer;
+            try {
+                const gameState = await actor.getGameState();
+                players = gameState.players;
+                currentPlayer = gameState.currentPlayer;
 
-            players.forEach((player, index) => {
-                const cell = document.getElementById(`cell-${player.position}`);
-                const cellRect = cell.getBoundingClientRect();
-                const boardRect = board.getBoundingClientRect();
+                players.forEach((player, index) => {
+                    const cell = document.getElementById(`cell-${player.position}`);
+                    const cellRect = cell.getBoundingClientRect();
+                    const boardRect = board.getBoundingClientRect();
 
-                player.element.style.left = `${cellRect.left - boardRect.left + cell.offsetWidth / 2 - 10}px`;
-                player.element.style.top = `${cellRect.top - boardRect.top + cell.offsetHeight / 2 - 10}px`;
+                    player.element.style.left = `${cellRect.left - boardRect.left + cell.offsetWidth / 2 - 10}px`;
+                    player.element.style.top = `${cellRect.top - boardRect.top + cell.offsetHeight / 2 - 10}px`;
 
-                const infoEl = index === 0 ? player1InfoEl : player2InfoEl;
-                infoEl.textContent = `Player ${index + 1}: ${player.position}`;
-            });
+                    const infoEl = index === 0 ? player1InfoEl : player2InfoEl;
+                    infoEl.textContent = `Player ${index + 1}: ${player.position}`;
+                });
 
-            rollButton.textContent = `Player ${currentPlayer + 1} Roll`;
+                rollButton.textContent = `Player ${currentPlayer + 1} Roll`;
+            } catch (error) {
+                console.error('Error updating player positions:', error);
+            }
         }
 
         async function movePlayer(playerIndex, spaces) {
-            const result = await actor.movePlayer(playerIndex, spaces);
-            if ('ok' in result) {
-                await updatePlayerPositions();
-                const gameState = result.ok;
-                if (gameState.winner !== null) {
-                    setTimeout(() => {
-                        alert(`Congratulations! Player ${gameState.winner + 1} won!`);
-                        resetGame();
-                    }, 100);
+            try {
+                const result = await actor.movePlayer(playerIndex, spaces);
+                if ('ok' in result) {
+                    await updatePlayerPositions();
+                    const gameState = result.ok;
+                    if (gameState.winner !== null) {
+                        setTimeout(() => {
+                            alert(`Congratulations! Player ${gameState.winner + 1} won!`);
+                            resetGame();
+                        }, 100);
+                    }
+                } else {
+                    console.error(result.err);
                 }
-            } else {
-                console.error(result.err);
+            } catch (error) {
+                console.error('Error moving player:', error);
             }
         }
 
         async function resetGame() {
-            await actor.initGame();
-            await updatePlayerPositions();
+            try {
+                await actor.initGame();
+                await updatePlayerPositions();
+            } catch (error) {
+                console.error('Error resetting game:', error);
+            }
         }
 
         rollButton.addEventListener('click', async () => {
